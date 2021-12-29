@@ -84,14 +84,18 @@ public abstract class SpringFactoriesLoader {
 	}
 
 	public static List<String> loadFactoryNames(Class<?> factoryClass, ClassLoader classLoader) {
+		// factoryClass： EnableAutoConfiguration.class
 		String factoryClassName = factoryClass.getName();
 		try {
+			//类加载器扫描 META-INF/spring.factories文件下 文件路径
 			Enumeration<URL> urls = (classLoader != null ? classLoader.getResources(FACTORIES_RESOURCE_LOCATION) :
 					ClassLoader.getSystemResources(FACTORIES_RESOURCE_LOCATION));
 			List<String> result = new ArrayList<String>();
 			while (urls.hasMoreElements()) {
+				// 遍历文件 即得到Properties对象
 				URL url = urls.nextElement();
 				Properties properties = PropertiesLoaderUtils.loadProperties(new UrlResource(url));
+				// 获取EnableAutoConfiguration.class 的值并返回
 				String factoryClassNames = properties.getProperty(factoryClassName);
 				result.addAll(Arrays.asList(StringUtils.commaDelimitedListToStringArray(factoryClassNames)));
 			}

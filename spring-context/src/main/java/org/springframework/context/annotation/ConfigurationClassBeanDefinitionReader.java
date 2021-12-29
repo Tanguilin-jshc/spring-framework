@@ -116,11 +116,14 @@ class ConfigurationClassBeanDefinitionReader {
 	 * Read a particular {@link ConfigurationClass}, registering bean definitions for the
 	 * class itself, all its {@link Bean} methods
 	 */
+	// 注册 @Configuration @Bean @Component 的 BeanDefinition , 如果有加@Import注解
+	// Class<?>[] value(); 这是@import 注解的属性，那么将value中的class都注入进去
 	private void loadBeanDefinitionsForConfigurationClass(ConfigurationClass configClass) {
 		if (configClass.isImported()) {
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
 		for (BeanMethod beanMethod : configClass.getBeanMethods()) {
+			// 获取注解信息，将 是否懒加载，作用域scope,dependon,别名等信息设置在BeanDefinition中，然后注册BeanDefinition
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
@@ -212,6 +215,7 @@ class ConfigurationClassBeanDefinitionReader {
 			beanDef.setPrimary(true);
 		}
 
+		// 将是否懒加载等信息放在 beanDef对应的属性中 LazyInit，DependsOn，AutowireMode，DestroyMethodName，Scope
 		// is this bean to be instantiated lazily?
 		if (metadata.isAnnotated(Lazy.class.getName())) {
 			AnnotationAttributes lazy = MetadataUtils.attributesFor(metadata, Lazy.class);
@@ -274,6 +278,7 @@ class ConfigurationClassBeanDefinitionReader {
 	}
 
 
+	// 对importedResources批量注入BeanDefinition
 	private void loadBeanDefinitionsFromImportedResources(
 			Map<String, Class<? extends BeanDefinitionReader>> importedResources) {
 

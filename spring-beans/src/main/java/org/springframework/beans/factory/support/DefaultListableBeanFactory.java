@@ -97,6 +97,9 @@ import org.springframework.util.StringUtils;
  * @see org.springframework.beans.factory.xml.XmlBeanDefinitionReader
  */
 @SuppressWarnings("serial")
+// 完成一个注册,需要一个容器装注册进来的对象，也需要一些注册的方法，显然这些注册方法的定义应该封装成一个接口也就是BeanDefinitionRegistry，
+// 而容器Map<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<String, BeanDefinition>(64) 应该是具体实现类
+// 的属性
 public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFactory
 		implements ConfigurableListableBeanFactory, BeanDefinitionRegistry, Serializable {
 
@@ -646,6 +649,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	// Implementation of BeanDefinitionRegistry interface
 	//---------------------------------------------------------------------
 
+	// 注册BeanDefinition
 	public void registerBeanDefinition(String beanName, BeanDefinition beanDefinition)
 			throws BeanDefinitionStoreException {
 
@@ -744,6 +748,10 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 	@Override
 	public void registerSingleton(String beanName, Object singletonObject) throws IllegalStateException {
+		// DefaultListableBeanFactory 继承自  AbstractBeanFactory
+		//  AbstractBeanFactory 继承自 FactoryBeanRegistrySupport
+		// FactoryBeanRegistrySupport 继承自 DefaultSingletonBeanRegistry
+		// DefaultSingletonBeanRegistry 对于单例的注册 应用了线程安全的ConcurrentHashMap,在注册时锁住了这个hashmap
 		super.registerSingleton(beanName, singletonObject);
 		clearByTypeCache();
 	}

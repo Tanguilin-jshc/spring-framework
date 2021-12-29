@@ -127,6 +127,10 @@ import org.springframework.util.ObjectUtils;
  * @see org.springframework.context.ApplicationListener
  * @see org.springframework.context.MessageSource
  */
+// 它有各种functionality工具，比如它的实现类AnnotationConfigWebApplicationContext 就有BeanNameGenerator beanNameGenerator，
+//	ScopeMetadataResolver scopeMetadataResolver AnnotatedBeanDefinitionReader（这个是直接new出来的）ClassPathBeanDefinitionScanner
+//	（这个也是直接new出来的）,DefaultListableBeanFactory
+//	这些工具结合环境ConfigurableEnvironment
 public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		implements ConfigurableApplicationContext, DisposableBean {
 
@@ -448,9 +452,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	public void refresh() throws BeansException, IllegalStateException {
 		synchronized (this.startupShutdownMonitor) {
 			// Prepare this context for refreshing.
+			// 只做了参数校验，查看需要的参数是否都有了，专门弄了个Resolver类和异常类
 			prepareRefresh();
 
 			// Tell the subclass to refresh the internal bean factory.
+			// 在obtainFreshBeanFactory 中会调用refreshBeanFactory();
+			// refreshBeanFactory是个抽象方法 在GenericApplicationContext类中实现的是 this.refreshed = true
+			// 在实现的是AbstractRefreshableApplicationContext中 实现的是
+			// customizeBeanFactory(beanFactory); loadBeanDefinitions(beanFactory);
+			// 重要的Context: ClassPathXmlApplicationContext 和 AnnotationConfigWebApplicationContext都是走的第二个
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
@@ -458,12 +468,19 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 			try {
 				// Allows post-processing of the bean factory in context subclasses.
+				// AbstractRefreshableWebApplicationContext 即 XmlWebApplicationContext 和 AnnotationConfigWebApplicationContext
+				// 重写的逻辑是 this.beanPostProcessors.add(beanPostProcessor); 也就是AbstractBeanFactory的参数
+				// List<BeanPostProcessor> beanPostProcessors = new ArrayList<BeanPostProcessor>() 中添加元素
 				postProcessBeanFactory(beanFactory);
 
 				// Invoke factory processors registered as beans in the context.
+				// ConfigurationClassPostProcessor执行 processConfigBeanDefinitions(registry)->
+				// 执行后置处理器 BeanDefinitionRegistryPostProcessor 和 程序员自己实现的 BeanFactoryPostProcessor
+				// 完成BeanDefinition的注册
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
+				// 将类型是BeanPostProcessor 的BeanDefinition 添加到beanPostProcessors列表中，并区别@Priority,@Order添加
 				registerBeanPostProcessors(beanFactory);
 
 				// Initialize message source for this context.
@@ -521,6 +538,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// Initialize any placeholder property sources in the context environment
 		initPropertySources();
 
+		// 先做参数校验再干事
 		// Validate that all properties marked as required are resolvable
 		// see ConfigurablePropertyResolver#setRequiredProperties
 		getEnvironment().validateRequiredProperties();
@@ -611,18 +629,27 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * respecting explicit order if given.
 	 * <p>Must be called before singleton instantiation.
 	 */
+	// 执行后置处理器
 	protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory) {
 		// Invoke BeanDefinitionRegistryPostProcessors first, if any.
 		Set<String> processedBeans = new HashSet<String>();
+		// 有n种BeanFactoryPostProcessor，但方法都是对ConfigurableListableBeanFactory beanFactory进行操作
 		if (beanFactory instanceof BeanDefinitionRegistry) {
 			BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
+			// 创建两种后置处理器对应的列表
 			List<BeanFactoryPostProcessor> regularPostProcessors = new LinkedList<BeanFactoryPostProcessor>();
 			List<BeanDefinitionRegistryPostProcessor> registryPostProcessors =
 					new LinkedList<BeanDefinitionRegistryPostProcessor>();
+			// 遍历后置处理器
 			for (BeanFactoryPostProcessor postProcessor : getBeanFactoryPostProcessors()) {
+				// 如果是 BeanDefinitionRegistryPostProcessor
 				if (postProcessor instanceof BeanDefinitionRegistryPostProcessor) {
 					BeanDefinitionRegistryPostProcessor registryPostProcessor =
 							(BeanDefinitionRegistryPostProcessor) postProcessor;
+					// 执行接口代码postProcessBeanDefinitionRegistry
+					// 遍历BeanDefinitionRegistry 中的BeanDefinition,得到被@Configuration,@Component,@Bean
+					// 注解的BeanDefinition,然后将加了@Import注解的BeanDefinition的Import值对应的BeanDefinition注册进
+					// map中，并完善BeanDefination的 DependOn,lazyInit,role等信息
 					registryPostProcessor.postProcessBeanDefinitionRegistry(registry);
 					registryPostProcessors.add(registryPostProcessor);
 				}
@@ -634,10 +661,16 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 					beanFactory.getBeansOfType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			List<BeanDefinitionRegistryPostProcessor> registryPostProcessorBeans =
 					new ArrayList<BeanDefinitionRegistryPostProcessor>(beanMap.values());
+			// 对后置处理器排序 将改变registryPostProcessorBeans的顺序，所以返回void ，里面是用的比较器实现的
 			OrderComparator.sort(registryPostProcessorBeans);
 			for (BeanDefinitionRegistryPostProcessor postProcessor : registryPostProcessorBeans) {
+				// 执行接口方法 ，注册BeanDefinition
 				postProcessor.postProcessBeanDefinitionRegistry(registry);
 			}
+			// 将Registry类型，regular类型，单例类型分别注册
+			// 前面是执行接口的postProcessBeanDefinitionRegistry方法，这里同一执行接口的 BeanFactoryPostProcessor.postProcessBeanFactory方法
+			// BeanDefinitionRegistryPostProcessor 继承自 BeanFactoryPostProcessor 这里就是自定义的方法了，所以这里程序员可以自行扩展
+			// 怎么实现这个接口
 			invokeBeanFactoryPostProcessors(registryPostProcessors, beanFactory);
 			invokeBeanFactoryPostProcessors(registryPostProcessorBeans, beanFactory);
 			invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);
@@ -709,6 +742,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * respecting explicit order if given.
 	 * <p>Must be called before any instantiation of application beans.
 	 */
+	// 将类型是BeanPostProcessor 的BeanDefinition 添加到beanPostProcessors列表中，并区别@Priority,@Order添加
 	protected void registerBeanPostProcessors(ConfigurableListableBeanFactory beanFactory) {
 		String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
 
@@ -716,6 +750,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// a bean is created during BeanPostProcessor instantiation, i.e. when
 		// a bean is not eligible for getting processed by all BeanPostProcessors.
 		int beanProcessorTargetCount = beanFactory.getBeanPostProcessorCount() + 1 + postProcessorNames.length;
+		// List<BeanPostProcessor> beanPostProcessors = new ArrayList<BeanPostProcessor>()
 		beanFactory.addBeanPostProcessor(new BeanPostProcessorChecker(beanFactory, beanProcessorTargetCount));
 
 		// Separate between BeanPostProcessors that implement PriorityOrdered,
@@ -724,6 +759,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		List<BeanPostProcessor> internalPostProcessors = new ArrayList<BeanPostProcessor>();
 		List<String> orderedPostProcessorNames = new ArrayList<String>();
 		List<String> nonOrderedPostProcessorNames = new ArrayList<String>();
+		// @Priority 优先级高于 @Order
 		for (String ppName : postProcessorNames) {
 			if (isTypeMatch(ppName, PriorityOrdered.class)) {
 				BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);

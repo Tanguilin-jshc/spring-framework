@@ -52,6 +52,7 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 
 	private String valueSeparator = SystemPropertyUtils.VALUE_SEPARATOR;
 
+	// 把所有需要的属性添加进集合
 	private final Set<String> requiredProperties = new LinkedHashSet<String>();
 
 
@@ -112,6 +113,7 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 	}
 
 	public void validateRequiredProperties() {
+		// 为此特地弄了一个异常类，来提示这些参数的异常信息
 		MissingRequiredPropertiesException ex = new MissingRequiredPropertiesException();
 		for (String key : this.requiredProperties) {
 			if (this.getProperty(key) == null) {

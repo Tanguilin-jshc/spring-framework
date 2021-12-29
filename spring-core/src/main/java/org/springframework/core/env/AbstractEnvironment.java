@@ -491,10 +491,12 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 	}
 
 	public void setRequiredProperties(String... requiredProperties) {
+		// 将需要校验的属性添加进 集合中，不过这个好像没什么用
 		this.propertyResolver.setRequiredProperties(requiredProperties);
 	}
 
 	public void validateRequiredProperties() throws MissingRequiredPropertiesException {
+		// 特地用了一个属性解析器来完成验证工作: 单一职责
 		this.propertyResolver.validateRequiredProperties();
 	}
 

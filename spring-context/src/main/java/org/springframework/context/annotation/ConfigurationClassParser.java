@@ -136,12 +136,16 @@ class ConfigurationClassParser {
 	 * @param beanName must not be null (as of Spring 3.1.1)
 	 */
 	public void parse(Class<?> clazz, String beanName) throws IOException {
+		// ConfigurationClass 就是由 Class 和 beanName 组成，对应前面的 @Configuration @Component @Bean 就是Configuration
 		processConfigurationClass(new ConfigurationClass(clazz, beanName));
 	}
 
+	// 判断是否被Profile注解了，即看是否在作用域内
 	protected void processConfigurationClass(ConfigurationClass configClass) throws IOException {
 		AnnotationMetadata metadata = configClass.getMetadata();
+		// 如果这个类 是 Profile注解了的 @Profile:指定组件在哪个环境的情况下才能被注册到容器中，不指定，任何环境下都能注册这个组件
 		if (this.environment != null && metadata.isAnnotated(Profile.class.getName())) {
+			// 用MetadataUtils类 得到AnnotationAttributes 即属性值对象(每个Annotation都有属性)
 			AnnotationAttributes profile = MetadataUtils.attributesFor(metadata, Profile.class);
 			if (!this.environment.acceptsProfiles(profile.getStringArray("value"))) {
 				return;

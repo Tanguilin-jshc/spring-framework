@@ -185,6 +185,7 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 	 */
 	@Override
 	protected void loadBeanDefinitions(DefaultListableBeanFactory beanFactory) {
+		// Environment对象包装了profile等配置的信息
 		AnnotatedBeanDefinitionReader reader = new AnnotatedBeanDefinitionReader(beanFactory);
 		reader.setEnvironment(getEnvironment());
 
@@ -203,6 +204,10 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 			scanner.setScopeMetadataResolver(scopeMetadataResolver);
 		}
 
+		// 在webmvc 中有用到注册 Class<?>[] configClasses = getRootConfigClasses();
+		//		if (!ObjectUtils.isEmpty(configClasses)) {
+		//			AnnotationConfigWebApplicationContext rootAppContext = new AnnotationConfigWebApplicationContext();
+		//			rootAppContext.register(configClasses);
 		if (!this.annotatedClasses.isEmpty()) {
 			if (logger.isInfoEnabled()) {
 				logger.info("Registering annotated classes: [" +
@@ -219,10 +224,13 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 			scanner.scan(this.basePackages.toArray(new String[this.basePackages.size()]));
 		}
 
+		// 在XmlWebApplicationContext 是 /WEB-INF/ + namespace + .xml或者 /WEB-INF/applicationContext.xml
+		// 默认是null
 		String[] configLocations = getConfigLocations();
 		if (configLocations != null) {
 			for (String configLocation : configLocations) {
 				try {
+					// 获取全类名利用反射得到 Class
 					Class<?> clazz = getClassLoader().loadClass(configLocation);
 					if (logger.isInfoEnabled()) {
 						logger.info("Successfully resolved class for [" + configLocation + "]");

@@ -55,19 +55,26 @@ abstract class ConfigurationClassUtils {
 	 * @param metadataReaderFactory the current factory in use by the caller
 	 * @return whether the candidate qualifies as (any kind of) configuration class
 	 */
+	// 判断BeanDefinition 是否加了@Component @Bean @Configuration注解
 	public static boolean checkConfigurationClassCandidate(BeanDefinition beanDef, MetadataReaderFactory metadataReaderFactory) {
 		AnnotationMetadata metadata = null;
 
 		// Check already loaded Class if present...
 		// since we possibly can't even load the class file for this Class.
+		// 好像意思 如果是Class类型
 		if (beanDef instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) beanDef).hasBeanClass()) {
+			// 获取BeanDefinition的 class
 			Class<?> beanClass = ((AbstractBeanDefinition) beanDef).getBeanClass();
+			// 创建StandardAnnotationMetadata对象
 			metadata = new StandardAnnotationMetadata(beanClass, true);
 		}
 		else {
 			String className = beanDef.getBeanClassName();
 			if (className != null) {
 				try {
+					// 拼接全类名,利用类加载器得到 MetadataReader （反射技术）
+					// MetadataReader 作用是 Simple facade for accessing class metadata
+					// 接口是 Resource getResource() ClassMetadata getClassMetadata() AnnotationMetadata getAnnotationMetadata()
 					MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(className);
 					metadata = metadataReader.getAnnotationMetadata();
 				}
@@ -81,10 +88,13 @@ abstract class ConfigurationClassUtils {
 		}
 
 		if (metadata != null) {
+			 // metadata.isAnnotated(Configuration.class.getName()) 判断是否有Configuration注解
 			if (isFullConfigurationCandidate(metadata)) {
+				// 如果是Configuration注解的类，添加属性
 				beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 				return true;
 			}
+			// 判断是否加 @Component 和 @Bean 注解
 			else if (isLiteConfigurationCandidate(metadata)) {
 				beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
 				return true;

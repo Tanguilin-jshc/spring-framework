@@ -71,8 +71,11 @@ public class SimpleMetadataReaderFactory implements MetadataReaderFactory {
 
 
 	public MetadataReader getMetadataReader(String className) throws IOException {
+		// 去掉 .(包名含有.) 和 /
+		// classpath: + className + .class 得到完整类名
 		String resourcePath = ResourceLoader.CLASSPATH_URL_PREFIX +
 				ClassUtils.convertClassNameToResourcePath(className) + ClassUtils.CLASS_FILE_SUFFIX;
+		// 用类加载器加载Resource
 		Resource resource = this.resourceLoader.getResource(resourcePath);
 		if (!resource.exists()) {
 			// Maybe an inner class name using the dot name syntax? Need to use the dollar syntax here...

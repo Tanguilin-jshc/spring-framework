@@ -222,6 +222,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		}
 		this.registriesPostProcessed.add(registryId);
 
+		// 进去有详细解析
 		processConfigBeanDefinitions(registry);
 	}
 
@@ -248,16 +249,22 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 * Build and validate a configuration model based on the registry of
 	 * {@link Configuration} classes.
 	 */
+	// 遍历BeanDefinitionRegistry 中的BeanDefinition,得到被@Configuration,@Component,@Bean
+	// 注解的BeanDefinition,然后将加了@Import注解的BeanDefinition的Import值对应的BeanDefinition注册进
+	// map中，并完善BeanDefination的 DependOn,lazyInit,role等信息
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
 		Set<BeanDefinitionHolder> configCandidates = new LinkedHashSet<BeanDefinitionHolder>();
+		// 遍历所有的BeanDefinitionNames
 		for (String beanName : registry.getBeanDefinitionNames()) {
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
+			// 判断BeanDefinition是否加了 @Configuration @Component @Bean 注解
 			if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
 				configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
 			}
 		}
 
 		// Return immediately if no @Configuration classes were found
+		// 如果都不是加了注解直接返回
 		if (configCandidates.isEmpty()) {
 			return;
 		}
@@ -281,6 +288,8 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			BeanDefinition bd = holder.getBeanDefinition();
 			try {
 				if (bd instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) bd).hasBeanClass()) {
+					// 判断BeanDefinition是否加上了@Configuration,@Bean,@Component注解，以及判断是否在@Profile作用域内
+					// 如果是，则Set<ConfigurationClass> configurationClasses 中添加
 					parser.parse(((AbstractBeanDefinition) bd).getBeanClass(), holder.getBeanName());
 				}
 				else {
@@ -314,6 +323,8 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					registry, this.sourceExtractor, this.problemReporter, this.metadataReaderFactory,
 					this.resourceLoader, this.environment, this.importBeanNameGenerator);
 		}
+		// 将上面符合条件的 BeanDefinition添加到map中，判断是否有@Import 注解，如果有将@Import注解中的class都注册进去
+		// 否则只是将自己注册进去，并给BeanDifinition 的dependOn ,role ,lazyInit 等信息添加进去
 		this.reader.loadBeanDefinitions(parser.getConfigurationClasses());
 
 		// Register the ImportRegistry as a bean in order to support ImportAware @Configuration classes

@@ -38,6 +38,7 @@ import org.springframework.core.env.Environment;
  * @author Chris Beams
  * @since 03.11.2003
  */
+// 作用就是 configure an application context 去配置spring 容器
 public interface ConfigurableApplicationContext extends ApplicationContext, Lifecycle, Closeable {
 
 	/**
